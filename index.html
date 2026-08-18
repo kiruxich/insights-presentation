@@ -602,10 +602,17 @@
 
   /* Полный адаптив под смартфоны */
   @media (max-width:600px){
+    #deck{
+      height:auto !important;
+      overflow-y:visible !important;
+      scroll-snap-type:none !important;
+    }
     section.slide{
       padding:65px 18px 75px;
       min-height:100vh;
       height:auto;
+      scroll-snap-align:none !important;
+      scroll-snap-stop:normal !important;
     }
     .slide-num{top:20px; left:18px; font-size:11px;}
     .slide-tag{top:20px; right:18px; font-size:11px;}
@@ -1082,19 +1089,37 @@
   function pad(n){ return n < 10 ? '0'+n : ''+n; }
 
   function updateActive(){
-    var scrollTop = deck.scrollTop;
-    var winH = deck.clientHeight;
-    var idx = Math.round(scrollTop / winH);
-    idx = Math.max(0, Math.min(slides.length - 1, idx));
+    var isMobile = window.innerWidth <= 600;
+    var idx = 0;
+    
+    if (isMobile) {
+      var scrollPos = window.scrollY || document.documentElement.scrollTop;
+      var winH = window.innerHeight;
+      slides.forEach(function(s, i){
+        if (s.offsetTop <= scrollPos + winH / 2) {
+          idx = i;
+        }
+      });
+    } else {
+      var scrollTop = deck.scrollTop;
+      var winH = deck.clientHeight;
+      idx = Math.round(scrollTop / winH);
+      idx = Math.max(0, Math.min(slides.length - 1, idx));
+    }
+
     dotButtons.forEach(function(b, i){ b.classList.toggle('active', i === idx); });
     counterNow.textContent = pad(idx + 1);
-    var maxScroll = deck.scrollHeight - winH;
-    var pct = maxScroll > 0 ? (scrollTop / maxScroll) * 100 : 0;
+    
+    var maxScroll = isMobile ? (document.documentElement.scrollHeight - window.innerHeight) : (deck.scrollHeight - winH);
+    var currentScroll = isMobile ? (window.scrollY || document.documentElement.scrollTop) : deck.scrollTop;
+    var pct = maxScroll > 0 ? (currentScroll / maxScroll) * 100 : 0;
     progressFill.style.width = pct + '%';
+    
     return idx;
   }
 
   deck.addEventListener('scroll', function(){ window.requestAnimationFrame(updateActive); });
+  window.addEventListener('scroll', function(){ window.requestAnimationFrame(updateActive); });
   updateActive();
 
   document.getElementById('next-btn').addEventListener('click', function(){
@@ -1125,7 +1150,6 @@
   /* Увеличение скриншотов по клику */
   var lightbox = document.getElementById('lightbox-modal');
   var lightboxImg = document.getElementById('lightbox-img');
-  var lightboxClose = document.querySelector('.lightbox-close');
 
   document.querySelectorAll('.shot').forEach(function(shot){
     shot.addEventListener('click', function(){
