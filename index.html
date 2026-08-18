@@ -237,7 +237,6 @@
   }
   .icon-box svg{width:18px;height:18px;stroke:var(--accent);}
 
-  /* Стили для скриншотов с лупой и кликом */
   .shot{
     position:relative;
     border-radius:12px;
@@ -265,7 +264,6 @@
     opacity:1;
   }
 
-  /* Модальное окно для полноэкранного просмотра */
   .lightbox{
     display:none;
     position:fixed;
@@ -365,7 +363,6 @@
   }
 
   .stat-row{display:flex;gap:48px;margin-top:32px;}
-  .stat{}
   .stat .val{
     font-family:var(--font-display);
     font-size:34px;
@@ -589,17 +586,82 @@
     color:var(--text-muted);
   }
 
+  /* Адаптив для планшетов */
   @media (max-width:980px){
-    section.slide{padding:100px 26px 60px;}
+    section.slide{padding:90px 26px 70px; justify-content: flex-start;}
     .slide-num{left:26px;}
     .slide-tag{right:26px;}
-    .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}
+    .grid-2,.grid-3,.grid-4{grid-template-columns:1fr; gap:20px;}
     .compare{grid-template-columns:1fr;}
     #counter{left:26px;}
     nav#dots{display:none;}
     .bars{gap:24px;}
     h1.headline{font-size:28px;}
-    .cover h1{font-size:15vw;}
+    .cover h1{font-size:12vw;}
+  }
+
+  /* Полный адаптив под смартфоны */
+  @media (max-width:600px){
+    section.slide{
+      padding:65px 18px 75px;
+      min-height:100vh;
+      height:auto;
+    }
+    .slide-num{top:20px; left:18px; font-size:11px;}
+    .slide-tag{top:20px; right:18px; font-size:11px;}
+    #counter{bottom:20px; left:18px; font-size:11px;}
+    .nav-arrows{bottom:14px; right:18px;}
+    .nav-arrows button{width:32px; height:32px;}
+
+    h1.headline{font-size:21px; line-height:1.25; margin-bottom:14px;}
+    p.lede{font-size:14px; line-height:1.5;}
+    .eyebrow{font-size:11px; margin-bottom:14px;}
+
+    .cover{justify-content:center;}
+    .cover h1{font-size:36px;}
+    .cover .sub{font-size:14px; margin-top:16px;}
+    .cover .brand{font-size:11px; margin-bottom:20px;}
+    .cover .tagline{font-size:13px; margin-top:28px;}
+    .cover .meta{
+      position:static;
+      margin-top:32px;
+      flex-wrap:wrap;
+      justify-content:center;
+      gap:6px 12px;
+    }
+
+    .card{padding:18px 16px; border-radius:12px;}
+    .card h3{font-size:15px;}
+    .card p{font-size:13.5px;}
+
+    .stat-row{flex-direction:column; gap:16px; margin-top:20px;}
+    .stat .val{font-size:26px;}
+    .stat .lab{margin-top:4px; max-width:none;}
+
+    .bars{gap:12px; justify-content:space-around; height:180px; margin-top:24px;}
+    .bar-col{width:100%; max-width:85px; gap:8px;}
+    .bar-col .bar-price{font-size:15px;}
+    .bar-col .bar-label{font-size:11px;}
+
+    table.data-table{
+      display:block;
+      overflow-x:auto;
+      white-space:nowrap;
+      -webkit-overflow-scrolling:touch;
+    }
+    table.data-table th, table.data-table td{padding:10px 12px 10px 0; font-size:13px;}
+
+    .pkg-card{padding:22px 18px;}
+    .pkg-card h3{font-size:18px;}
+
+    .contact-list{gap:10px; margin-top:20px;}
+    .contact-list .row{flex-direction:column; gap:2px; font-size:14px;}
+    .contact-list .row .k{width:auto; font-size:11px;}
+
+    .cta-row{margin-top:24px;}
+    .pill{font-size:11px; padding:4px 10px;}
+
+    .closing h1{font-size:21px; line-height:1.35;}
   }
 </style>
 </head>
