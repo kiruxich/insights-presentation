@@ -237,13 +237,66 @@
   }
   .icon-box svg{width:18px;height:18px;stroke:var(--accent);}
 
+  /* Стили для скриншотов с лупой и кликом */
   .shot{
+    position:relative;
     border-radius:12px;
     border:1px solid var(--border);
     overflow:hidden;
     box-shadow:0 30px 70px -30px rgba(0,0,0,0.7);
+    cursor:zoom-in;
+    transition:transform 0.25s, border-color 0.25s;
+  }
+  .shot:hover{
+    border-color:var(--accent);
+    transform:translateY(-2px);
   }
   .shot img{display:block;width:100%;height:auto;}
+  .shot::after{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:rgba(10, 10, 12, 0.55) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 24 24' fill='none' stroke='%236785ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3Cline x1='11' y1='8' x2='11' y2='14'/%3E%3C/svg%3E") center / 38px no-repeat;
+    opacity:0;
+    transition:opacity 0.25s ease;
+    pointer-events:none;
+  }
+  .shot:hover::after{
+    opacity:1;
+  }
+
+  /* Модальное окно для полноэкранного просмотра */
+  .lightbox{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:1000;
+    background:rgba(10, 10, 12, 0.94);
+    backdrop-filter:blur(10px);
+    align-items:center;
+    justify-content:center;
+    padding:30px;
+    cursor:zoom-out;
+  }
+  .lightbox.active{display:flex;}
+  .lightbox img{
+    max-width:92vw;
+    max-height:88vh;
+    border-radius:12px;
+    border:1px solid var(--border);
+    box-shadow:0 25px 60px rgba(0,0,0,0.9);
+    object-fit:contain;
+  }
+  .lightbox-close{
+    position:absolute;
+    top:24px;
+    right:32px;
+    font-size:32px;
+    color:var(--text-secondary);
+    cursor:pointer;
+    transition:color 0.2s;
+  }
+  .lightbox-close:hover{color:var(--accent);}
 
   .steps{display:flex;flex-direction:column;gap:0;}
   .step{
@@ -460,6 +513,8 @@
     letter-spacing:0.05em;
   }
   .contact-list .row .v{color:var(--text-primary);}
+  .contact-list .row a{color:var(--accent);text-decoration:none;transition:opacity 0.2s;}
+  .contact-list .row a:hover{opacity:0.8;}
   .placeholder-tag{
     font-family:var(--font-mono);
     font-size:11.5px;
@@ -556,6 +611,12 @@
 <div class="nav-arrows">
   <button id="prev-btn" aria-label="Предыдущий слайд"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg></button>
   <button id="next-btn" aria-label="Следующий слайд"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+</div>
+
+<!-- Модальное окно просмотра скриншотов -->
+<div id="lightbox-modal" class="lightbox">
+  <span class="lightbox-close">&times;</span>
+  <img id="lightbox-img" src="" alt="Увеличенный скриншот">
 </div>
 
 <div id="deck">
@@ -822,7 +883,7 @@
       <p>Передаём код, разворачиваем на вашей инфраструктуре — дальше команда ведёт продукт сама</p>
     </div>
     <div class="card">
-      <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+      <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 010 7.75"/></svg></div>
       <h3>Нет своих разработчиков</h3>
       <p>То же самое плюс 3 месяца сопровождения и доработки по договорённости</p>
     </div>
@@ -848,7 +909,7 @@
     </div>
     <div>
       <div class="stat" style="margin-bottom:28px;">
-        <div class="val">от $3 500</div>
+        <div class="val">300 000 ₽</div>
         <div class="lab">единоразово, за передачу и внедрение</div>
       </div>
       <p class="lede">Операционные расходы на HikerAPI, OpenAI и сервер — отдельно, напрямую поставщикам: от $15 до $599 в месяц в зависимости от объёма поисков.</p>
@@ -874,7 +935,7 @@
     </div>
     <div>
       <div class="stat" style="margin-bottom:28px;">
-        <div class="val"><span class="accent">от $6 000</span></div>
+        <div class="val"><span class="accent">400 000 ₽</span></div>
         <div class="lab">единоразово, включая 3 месяца сопровождения</div>
       </div>
       <p class="lede">Рекомендуемый вариант, если в команде нет разработчика для самостоятельной поддержки продукта после передачи.</p>
@@ -919,9 +980,9 @@
   <p class="lede">Пришлите примерное число поисков в месяц и размер команды — подготовим точный расчёт и уточнённое предложение по срокам.</p>
   <div class="contact-list">
     <div class="row"><span class="k">Компания</span><span class="v">Alba Creation</span></div>
-    <div class="row"><span class="k">Сайт</span><span class="v">alba-creation.ru</span></div>
-    <div class="row"><span class="k">Почта</span><span class="v">—<span class="placeholder-tag">уточнить</span></span></div>
-    <div class="row"><span class="k">Telegram</span><span class="v">—<span class="placeholder-tag">уточнить</span></span></div>
+    <div class="row"><span class="k">Сайт</span><span class="v"><a href="https://alba-creation.ru" target="_blank">alba-creation.ru</a></span></div>
+    <div class="row"><span class="k">Почта</span><span class="v"><a href="mailto:sklemin0408@gmail.com">sklemin0408@gmail.com</a></span></div>
+    <div class="row"><span class="k">Telegram</span><span class="v"><a href="https://t.me/KirillSKlemin" target="_blank">@KirillSKlemin</a></span></div>
   </div>
   <div class="cta-row">
     <div class="pill">Предложение актуально 30 дней с даты презентации</div>
@@ -998,6 +1059,29 @@
       prev.scrollIntoView({behavior:'smooth'});
     }
   });
+
+  /* Увеличение скриншотов по клику */
+  var lightbox = document.getElementById('lightbox-modal');
+  var lightboxImg = document.getElementById('lightbox-img');
+  var lightboxClose = document.querySelector('.lightbox-close');
+
+  document.querySelectorAll('.shot').forEach(function(shot){
+    shot.addEventListener('click', function(){
+      var img = shot.querySelector('img');
+      if(img){
+        lightboxImg.src = img.src;
+        lightbox.classList.add('active');
+      }
+    });
+  });
+
+  if(lightbox){
+    lightbox.addEventListener('click', function(e){
+      if(e.target !== lightboxImg){
+        lightbox.classList.remove('active');
+      }
+    });
+  }
 
   function initGraph(canvasId){
     var canvas = document.getElementById(canvasId);
