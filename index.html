@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InSights — инструмент подбора блогеров под ключ | Alba Creation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0c;
+    --surface:#131316;
+    --surface-2:#1b1b20;
+    --surface-3:#212127;
+    --border:#26262c;
+    --border-soft:#1c1c21;
+    --text-primary:#f4f4f2;
+    --text-secondary:#9a9aa4;
+    --text-muted:#5c5c66;
+    --accent:#6785ff;
+    --accent-dim:#38416b;
+    --accent-soft:rgba(103,133,255,0.10);
+    --accent-soft-strong:rgba(103,133,255,0.18);
+    --score:#3ecf8e;
+    --score-soft:rgba(62,207,142,0.12);
+    --amber:#e0ab52;
+    --amber-soft:rgba(224,171,82,0.12);
+    --font-display:'Unbounded', sans-serif;
+    --font-body:'Manrope', sans-serif;
+    --font-mono:'JetBrains Mono', monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text-primary);
+    font-family:var(--font-body);
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--accent);color:#fff;}
+
+  #deck{
+    height:100vh;
+    overflow-y:scroll;
+    scroll-snap-type:y mandatory;
+    scrollbar-width:none;
+  }
+  #deck::-webkit-scrollbar{display:none;}
+
+  section.slide{
+    min-height:100vh;
+    width:100%;
+    scroll-snap-align:start;
+    scroll-snap-stop:always;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:80px 90px;
+    border-bottom:1px solid var(--border-soft);
+  }
+
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:12.5px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--accent);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:22px;
+  }
+  .eyebrow::before{
+    content:'';
+    width:22px;height:1px;
+    background:var(--accent);
+    display:inline-block;
+  }
+  h1.headline{
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:clamp(30px,3.6vw,50px);
+    line-height:1.14;
+    letter-spacing:-0.01em;
+    max-width:920px;
+    margin-bottom:22px;
+  }
+  h1.headline .accent{color:var(--accent);}
+  p.lede{
+    font-size:18px;
+    line-height:1.65;
+    color:var(--text-secondary);
+    max-width:660px;
+    font-weight:400;
+  }
+  .slide-num{
+    position:absolute;
+    top:40px;
+    left:90px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--text-muted);
+    letter-spacing:0.05em;
+  }
+  .slide-tag{
+    position:absolute;
+    top:40px;
+    right:90px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--text-muted);
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+  }
+
+  nav#dots{
+    position:fixed;
+    right:34px;
+    top:50%;
+    transform:translateY(-50%);
+    display:flex;
+    flex-direction:column;
+    gap:11px;
+    z-index:50;
+  }
+  nav#dots button{
+    width:7px;height:7px;
+    border-radius:50%;
+    background:var(--border);
+    border:none;
+    cursor:pointer;
+    padding:0;
+    transition:background .25s, transform .25s;
+  }
+  nav#dots button.active{
+    background:var(--accent);
+    transform:scale(1.5);
+  }
+
+  #progress-rail{
+    position:fixed;
+    left:0;top:0;
+    width:100%;
+    height:2px;
+    background:var(--border-soft);
+    z-index:60;
+  }
+  #progress-fill{
+    height:100%;
+    width:0%;
+    background:var(--accent);
+    transition:width .2s;
+  }
+
+  #counter{
+    position:fixed;
+    bottom:34px;
+    left:90px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--text-muted);
+    z-index:50;
+    letter-spacing:0.05em;
+  }
+  #counter b{color:var(--text-secondary);font-weight:500;}
+
+  .nav-arrows{
+    position:fixed;
+    bottom:30px;
+    right:34px;
+    z-index:50;
+    display:flex;
+    gap:8px;
+  }
+  .nav-arrows button{
+    width:36px;height:36px;
+    border-radius:50%;
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--text-secondary);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:border-color .2s, color .2s;
+  }
+  .nav-arrows button:hover{border-color:var(--accent);color:var(--accent);}
+  .nav-arrows svg{width:15px;height:15px;}
+
+  canvas.graph-bg{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    opacity:0.55;
+  }
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:center;}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
+  .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:26px 24px;
+  }
+  .card .num{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--accent);
+    margin-bottom:14px;
+    display:block;
+  }
+  .card h3{
+    font-family:var(--font-display);
+    font-weight:500;
+    font-size:16.5px;
+    margin-bottom:10px;
+    line-height:1.35;
+  }
+  .card p{
+    font-size:14.5px;
+    color:var(--text-secondary);
+    line-height:1.6;
+  }
+
+  .icon-box{
+    width:38px;height:38px;
+    border-radius:10px;
+    background:var(--accent-soft);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:16px;
+  }
+  .icon-box svg{width:18px;height:18px;stroke:var(--accent);}
+
+  .shot{
+    border-radius:12px;
+    border:1px solid var(--border);
+    overflow:hidden;
+    box-shadow:0 30px 70px -30px rgba(0,0,0,0.7);
+  }
+  .shot img{display:block;width:100%;height:auto;}
+
+  .steps{display:flex;flex-direction:column;gap:0;}
+  .step{
+    display:flex;
+    gap:20px;
+    padding:16px 0;
+    border-bottom:1px solid var(--border-soft);
+  }
+  .step:last-child{border-bottom:none;}
+  .step .step-n{
+    font-family:var(--font-mono);
+    font-size:13px;
+    color:var(--accent);
+    width:26px;
+    flex-shrink:0;
+    padding-top:2px;
+  }
+  .step .step-body h4{
+    font-size:15.5px;
+    font-weight:600;
+    margin-bottom:4px;
+  }
+  .step .step-body p{
+    font-size:14px;
+    color:var(--text-secondary);
+    line-height:1.55;
+  }
+
+  table.data-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:14.5px;
+  }
+  table.data-table th{
+    text-align:left;
+    font-family:var(--font-mono);
+    font-size:11.5px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--text-muted);
+    font-weight:500;
+    padding:0 16px 12px 0;
+    border-bottom:1px solid var(--border);
+  }
+  table.data-table td{
+    padding:14px 16px 14px 0;
+    border-bottom:1px solid var(--border-soft);
+    color:var(--text-secondary);
+    vertical-align:top;
+  }
+  table.data-table td.strong{color:var(--text-primary);font-weight:500;}
+  table.data-table tr:last-child td{border-bottom:none;}
+  table.data-table td.mono{font-family:var(--font-mono);font-size:13.5px;}
+
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    padding:5px 12px;
+    border-radius:20px;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    color:var(--text-secondary);
+  }
+
+  .stat-row{display:flex;gap:48px;margin-top:32px;}
+  .stat{}
+  .stat .val{
+    font-family:var(--font-display);
+    font-size:34px;
+    font-weight:600;
+    color:var(--text-primary);
+    line-height:1;
+  }
+  .stat .val .accent{color:var(--accent);}
+  .stat .lab{
+    font-size:13px;
+    color:var(--text-muted);
+    margin-top:8px;
+    max-width:160px;
+    line-height:1.4;
+  }
+
+  .bars{display:flex;align-items:flex-end;gap:56px;height:220px;margin-top:36px;}
+  .bar-col{display:flex;flex-direction:column;align-items:center;gap:14px;width:120px;}
+  .bar-track{
+    width:100%;
+    flex:1;
+    display:flex;
+    align-items:flex-end;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:8px;
+    overflow:hidden;
+  }
+  .bar-fill{
+    width:100%;
+    background:linear-gradient(180deg, var(--accent), var(--accent-dim));
+    border-radius:8px 8px 0 0;
+  }
+  .bar-col .bar-price{
+    font-family:var(--font-mono);
+    font-size:19px;
+    font-weight:600;
+    color:var(--text-primary);
+  }
+  .bar-col .bar-label{
+    font-size:12.5px;
+    color:var(--text-muted);
+    text-align:center;
+    line-height:1.4;
+  }
+
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:28px;}
+  .compare .col{
+    border-radius:14px;
+    padding:26px;
+    border:1px solid var(--border);
+  }
+  .compare .col.bad{background:var(--surface);}
+  .compare .col.good{background:var(--accent-soft);border-color:var(--accent-dim);}
+  .compare h4{
+    font-family:var(--font-display);
+    font-size:15px;
+    font-weight:500;
+    margin-bottom:16px;
+  }
+  .compare ul{list-style:none;display:flex;flex-direction:column;gap:11px;}
+  .compare li{
+    font-size:14px;
+    color:var(--text-secondary);
+    line-height:1.5;
+    display:flex;
+    gap:10px;
+  }
+  .compare li svg{flex-shrink:0;width:15px;height:15px;margin-top:2px;}
+  .compare .bad li svg{stroke:var(--text-muted);}
+  .compare .good li svg{stroke:var(--score);}
+
+  .pkg-card{
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:36px 34px;
+    display:flex;
+    flex-direction:column;
+    height:100%;
+  }
+  .pkg-card.featured{border-color:var(--accent-dim);background:var(--accent-soft);}
+  .pkg-card .pkg-for{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--text-muted);
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    margin-bottom:14px;
+  }
+  .pkg-card h3{
+    font-family:var(--font-display);
+    font-size:22px;
+    font-weight:600;
+    margin-bottom:8px;
+  }
+  .pkg-card .pkg-price{
+    font-family:var(--font-mono);
+    font-size:15px;
+    color:var(--accent);
+    margin-bottom:22px;
+  }
+  .pkg-card ul{list-style:none;display:flex;flex-direction:column;gap:12px;flex:1;}
+  .pkg-card li{
+    font-size:14px;
+    color:var(--text-secondary);
+    line-height:1.5;
+    display:flex;
+    gap:10px;
+  }
+  .pkg-card li svg{flex-shrink:0;width:15px;height:15px;margin-top:2px;stroke:var(--score);}
+  .pkg-card .pkg-time{
+    margin-top:22px;
+    padding-top:18px;
+    border-top:1px solid var(--border);
+    font-size:12.5px;
+    color:var(--text-muted);
+    font-family:var(--font-mono);
+  }
+
+  .cta-row{display:flex;gap:16px;margin-top:36px;align-items:center;flex-wrap:wrap;}
+  .btn{
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:14.5px;
+    padding:15px 28px;
+    border-radius:10px;
+    border:none;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+  }
+  .btn-primary{background:var(--text-primary);color:#0a0a0c;}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text-secondary);}
+
+  .contact-list{display:flex;flex-direction:column;gap:14px;margin-top:30px;}
+  .contact-list .row{display:flex;gap:16px;align-items:baseline;font-size:15px;}
+  .contact-list .row .k{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--text-muted);
+    width:110px;
+    flex-shrink:0;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+  }
+  .contact-list .row .v{color:var(--text-primary);}
+  .placeholder-tag{
+    font-family:var(--font-mono);
+    font-size:11.5px;
+    color:var(--amber);
+    background:var(--amber-soft);
+    padding:2px 8px;
+    border-radius:5px;
+    margin-left:8px;
+  }
+
+  .cover{
+    align-items:center;
+    text-align:center;
+    justify-content:center;
+    position:relative;
+  }
+  .cover .cover-inner{position:relative;z-index:2;}
+  .cover .brand{
+    font-family:var(--font-mono);
+    font-size:13px;
+    letter-spacing:0.16em;
+    color:var(--text-muted);
+    text-transform:uppercase;
+    margin-bottom:34px;
+  }
+  .cover h1{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:clamp(52px,9vw,116px);
+    letter-spacing:-0.02em;
+    line-height:1;
+  }
+  .cover .sub{
+    font-size:19px;
+    color:var(--text-secondary);
+    max-width:600px;
+    margin:26px auto 0;
+    line-height:1.6;
+  }
+  .cover .tagline{
+    margin-top:56px;
+    font-family:var(--font-display);
+    font-size:14px;
+    color:var(--accent);
+    letter-spacing:0.02em;
+  }
+  .cover .meta{
+    position:absolute;
+    bottom:44px;
+    left:0;right:0;
+    display:flex;
+    justify-content:center;
+    gap:22px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--text-muted);
+  }
+
+  .closing{align-items:center;text-align:center;justify-content:center;position:relative;}
+  .closing .closing-inner{position:relative;z-index:2;max-width:780px;}
+  .closing h1{
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:clamp(28px,3.6vw,44px);
+    line-height:1.3;
+  }
+  .closing .accent{color:var(--accent);}
+  .closing .final-tag{
+    margin-top:30px;
+    font-family:var(--font-mono);
+    font-size:13px;
+    color:var(--text-muted);
+  }
+
+  @media (max-width:980px){
+    section.slide{padding:100px 26px 60px;}
+    .slide-num{left:26px;}
+    .slide-tag{right:26px;}
+    .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}
+    .compare{grid-template-columns:1fr;}
+    #counter{left:26px;}
+    nav#dots{display:none;}
+    .bars{gap:24px;}
+    h1.headline{font-size:28px;}
+    .cover h1{font-size:15vw;}
+  }
+</style>
+</head>
+<body>
+
+<div id="progress-rail"><div id="progress-fill"></div></div>
+<div id="counter"><b id="counter-now">01</b> / 18</div>
+<nav id="dots"></nav>
+<div class="nav-arrows">
+  <button id="prev-btn" aria-label="Предыдущий слайд"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg></button>
+  <button id="next-btn" aria-label="Следующий слайд"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+</div>
+
+<div id="deck">
+
+<section class="slide cover" id="s1">
+  <canvas id="graph-canvas" class="graph-bg"></canvas>
+  <div class="cover-inner">
+    <div class="brand">Alba Creation · коммерческая презентация</div>
+    <h1>InSights</h1>
+    <p class="sub">Инструмент подбора Instagram-блогеров под ключ — для агентств, которые устали переплачивать за каждый поиск стороннему сервису</p>
+    <div class="tagline">Блогеры находятся через связи, а не через удачу</div>
+  </div>
+  <div class="meta">
+    <span>Август 2026</span><span>·</span><span>Версия 1.0</span><span>·</span><span>18 слайдов</span>
+  </div>
+</section>
+
+<section class="slide" id="s2">
+  <div class="slide-num">02 / 18</div>
+  <div class="slide-tag">Проблема</div>
+  <div class="eyebrow">Как это устроено сейчас</div>
+  <h1 class="headline">Каждый поиск блогера агентство <span class="accent">покупает заново</span></h1>
+  <p class="lede">Команды по работе с блогерами обычно пользуются внешними сервисами подбора — и платят за это по счётчику, без контроля над данными и без памяти о прошлых поисках.</p>
+  <div class="grid-4" style="margin-top:48px;">
+    <div class="card">
+      <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+      <h3>Оплата за каждый запрос</h3>
+      <p>Внешние сервисы берут от $0.02 до $0.5 за поиск — без прозрачности, из чего складывается цена</p>
+    </div>
+    <div class="card">
+      <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 8v4l3 3M12 3a9 9 0 100 18 9 9 0 000-18z"/></svg></div>
+      <h3>Часы ручного перебора</h3>
+      <p>Менеджер листает профили в Instagram вручную, чтобы набрать десяток подходящих кандидатов</p>
+    </div>
+    <div class="card">
+      <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h18M3 6h18M3 18h18"/></svg></div>
+      <h3>Нет памяти о поисках</h3>
+      <p>Каждый новый сотрудник и каждый новый запрос стартует с нуля — база не накапливается</p>
+    </div>
+    <div class="card">
+      <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg></div>
+      <h3>Данные — на чужих серверах</h3>
+      <p>История клиентов, ниши и договорённости уходят в закрытую систему стороннего сервиса</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="s3">
+  <div class="slide-num">03 / 18</div>
+  <div class="slide-tag">Решение</div>
+  <div class="eyebrow">Alba Creation</div>
+  <h1 class="headline">У вас может быть <span class="accent">свой инструмент</span> — уже проверенный в бою</h1>
+  <p class="lede">InSights — не гипотеза и не MVP на бумаге. Это внутренняя разработка, которую Alba Creation уже использует для закупки рекламы у блогеров, и теперь готова передать целиком — с кодом, инфраструктурой и документацией.</p>
+  <div class="stat-row">
+    <div class="stat"><div class="val"><span class="accent">3</span></div><div class="lab">режима постановки задачи поиска</div></div>
+    <div class="stat"><div class="val">0–<span class="accent">100</span></div><div class="lab">баллов — оценка каждого кандидата</div></div>
+    <div class="stat"><div class="val"><span class="accent">2000+</span></div><div class="lab">поисков в месяц — проверено на реальной нагрузке</div></div>
+    <div class="stat"><div class="val">$<span class="accent">0.0006</span></div><div class="lab">реальная себестоимость одного запроса к Instagram</div></div>
+  </div>
+</section>
+
+<section class="slide" id="s4">
+  <div class="slide-num">04 / 18</div>
+  <div class="slide-tag">Как это работает</div>
+  <div class="eyebrow">Постановка задачи</div>
+  <h1 class="headline">Три способа сказать системе, кого искать</h1>
+  <div class="grid-2" style="margin-top:20px;align-items:start;">
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">01</div>
+        <div class="step-body">
+          <h4>Чат с нейросетью</h4>
+          <p>«Найди небольших блогеров про еду до 30 лет, связанных с Анной Асти» — запрос обычным языком превращается в параметры поиска, при неоднозначности система уточняет</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">02</div>
+        <div class="step-body">
+          <h4>Панель фильтров</h4>
+          <p>Точная настройка: подписчики, охват, город, тема, язык, наличие контактов, верификация, активность за 30 дней</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">03</div>
+        <div class="step-body">
+          <h4>Поиск по ссылке на блогера</h4>
+          <p>Вставляете профиль-донор — система анализирует его аудиторию и подписки, находит похожих кандидатов в той же нише</p>
+        </div>
+      </div>
+    </div>
+    <div class="shot"><img src="./6.jpg" alt="Интерфейс поиска блогеров InSights"></div>
+  </div>
+</section>
+
+<section class="slide" id="s5">
+  <div class="slide-num">05 / 18</div>
+  <div class="slide-tag">Ключевая механика</div>
+  <div class="eyebrow">Поиск через связи</div>
+  <h1 class="headline">Аудитория одного блогера открывает десятки похожих</h1>
+  <div class="grid-2" style="margin-top:20px;align-items:start;">
+    <div class="shot"><img src="./10.jpg" alt="Настройка глубины поиска и волн обнаружения"></div>
+    <table class="data-table">
+      <tr><td class="mono">01</td><td class="strong">Загрузка профиля исходного блогера</td></tr>
+      <tr><td class="mono">02</td><td class="strong">Сбор его подписок и подписчиков</td></tr>
+      <tr><td class="mono">03</td><td class="strong">Объединение списков, удаление дублей</td></tr>
+      <tr><td class="mono">04</td><td class="strong">Быстрая отсечка по числу подписчиков</td></tr>
+      <tr><td class="mono">05</td><td class="strong">Проверка кандидатов: био, публикации, охват</td></tr>
+      <tr><td class="mono">06</td><td class="strong">Фильтры и итоговый рейтинг</td></tr>
+    </table>
+  </div>
+  <p class="lede" style="margin-top:24px;">Глубина поиска и «волны обнаружения» настраиваются: от быстрого поиска по одному профилю до глубокого обхода цепочки связей в несколько уровней.</p>
+</section>
+
+<section class="slide" id="s6">
+  <div class="slide-num">06 / 18</div>
+  <div class="slide-tag">Оценка</div>
+  <div class="eyebrow">Ранжирование кандидатов</div>
+  <h1 class="headline">Каждый кандидат получает оценку <span class="accent">0–100</span></h1>
+  <div class="grid-2" style="margin-top:20px;align-items:start;">
+    <div>
+      <p class="lede">Балл строится из совокупности признаков — не просто числа подписчиков:</p>
+      <div class="steps" style="margin-top:20px;">
+        <div class="step"><div class="step-n"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="stroke:var(--accent)"><path d="M20 6L9 17l-5-5"/></svg></div><div class="step-body"><h4>Охват аудитории</h4><p>Соотношение лайков и комментариев к числу подписчиков</p></div></div>
+        <div class="step"><div class="step-n"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="stroke:var(--accent)"><path d="M20 6L9 17l-5-5"/></svg></div><div class="step-body"><h4>Средние лайки и частота публикаций</h4><p>Насколько активно и стабильно ведётся аккаунт</p></div></div>
+        <div class="step"><div class="step-n"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="stroke:var(--accent)"><path d="M20 6L9 17l-5-5"/></svg></div><div class="step-body"><h4>Признаки накрутки</h4><p>Аномалии в поведении аудитории снижают итоговый балл</p></div></div>
+        <div class="step"><div class="step-n"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="stroke:var(--accent)"><path d="M20 6L9 17l-5-5"/></svg></div><div class="step-body"><h4>Соответствие фильтрам</h4><p>Насколько кандидат попадает в заданные критерии поиска</p></div></div>
+      </div>
+    </div>
+    <div class="shot"><img src="5.jpg" alt="Карточка кандидата с оценкой 95"></div>
+  </div>
+</section>
+
+<section class="slide" id="s7">
+  <div class="slide-num">07 / 18</div>
+  <div class="slide-tag">Командная работа</div>
+  <div class="eyebrow">От поиска до сделки</div>
+  <h1 class="headline">Общая воронка вместо разрозненных таблиц</h1>
+  <div class="grid-2" style="margin-top:20px;align-items:start;">
+    <div>
+      <p class="lede">Кандидатов сохраняют в общие карточки со статусами: в подборке → связались → переговоры → договорились → отказ. Вся команда видит одну и ту же картину, к каждому профилю можно добавить комментарий.</p>
+      <div class="stat-row" style="margin-top:36px;">
+        <div class="stat"><div class="val">5</div><div class="lab">статусов сделки — от подборки до результата</div></div>
+        <div class="stat"><div class="val">1</div><div class="lab">общая база для всей команды, без личных таблиц</div></div>
+      </div>
+    </div>
+    <div class="shot"><img src="./3.jpg" alt="Воронка сделок с блогерами"></div>
+  </div>
+</section>
+
+<section class="slide" id="s8">
+  <div class="slide-num">08 / 18</div>
+  <div class="slide-tag">Данные</div>
+  <div class="eyebrow">Экспорт и обновление</div>
+  <h1 class="headline">База растёт — каждый следующий поиск дешевле</h1>
+  <div class="grid-2" style="margin-top:30px;">
+    <div class="card">
+      <h3>Выгрузка результатов</h3>
+      <p>Отобранные блогеры экспортируются в CSV или Excel: имя, подписчики, охват, тема, контакты, ссылка на профиль, оценка — всё, что нужно для работы вне системы.</p>
+    </div>
+    <div class="card">
+      <h3>Обновление профилей</h3>
+      <p>Данные в базе периодически обновляются; часто используемые блогеры — чаще. Повторный поиск по уже загруженному профилю почти бесплатен и занимает секунды.</p>
+    </div>
+  </div>
+  <div class="stat-row" style="margin-top:40px;">
+    <div class="stat"><div class="val" style="color:var(--score)">~$0.03</div><div class="lab">повторный поиск — данные уже в базе</div></div>
+    <div class="stat"><div class="val">~$0.45</div><div class="lab">новый поиск — блогер на 8 000 подписчиков</div></div>
+  </div>
+</section>
+
+<section class="slide" id="s9">
+  <div class="slide-num">09 / 18</div>
+  <div class="slide-tag">Техническая часть</div>
+  <div class="eyebrow">Архитектура</div>
+  <h1 class="headline">Что под капотом</h1>
+  <table class="data-table" style="margin-top:24px;max-width:920px;">
+    <tr><th>Компонент</th><th>Назначение</th><th>Технология</th></tr>
+    <tr><td class="strong">Сайт</td><td>Интерфейс: чат, фильтры, результаты, подборки</td><td class="mono">React / Next.js</td></tr>
+    <tr><td class="strong">Сервер</td><td>Обработка запросов, фильтрация, оценка</td><td class="mono">Python, FastAPI</td></tr>
+    <tr><td class="strong">База данных</td><td>Профили, связи, история поисков</td><td class="mono">PostgreSQL</td></tr>
+    <tr><td class="strong">Очередь задач</td><td>Фоновая загрузка и обновление профилей</td><td class="mono">Redis, Celery</td></tr>
+    <tr><td class="strong">HikerAPI</td><td>Данные Instagram: подписчики, подписки, профили</td><td class="mono">внешний сервис</td></tr>
+    <tr><td class="strong">OpenAI</td><td>Разбор запросов, определение темы, контакты</td><td class="mono">GPT-4o mini</td></tr>
+    <tr><td class="strong">Хостинг</td><td>Сервер и база данных (Европа)</td><td class="mono">Hetzner</td></tr>
+  </table>
+  <p class="lede" style="margin-top:26px;">Сотрудникам не нужен VPN — работа идёт через внутренний сайт компании, запросы к Instagram выполняются с европейского сервера.</p>
+</section>
+
+<section class="slide" id="s10">
+  <div class="slide-num">10 / 18</div>
+  <div class="slide-tag">Экономика</div>
+  <div class="eyebrow">Своя инфраструктура vs. посредник</div>
+  <h1 class="headline">Вы платите за инфраструктуру, а не за наценку посредника</h1>
+  <div class="compare">
+    <div class="col bad">
+      <h4>Внешний сервис подбора</h4>
+      <ul>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>От $0.02 до $0.5 за поиск — без объяснения структуры цены</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>История и база кандидатов остаются у поставщика сервиса</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>Нельзя настроить фильтры и логику оценки под свою нишу</li>
+      </ul>
+    </div>
+    <div class="col good">
+      <h4>Собственная инфраструктура InSights</h4>
+      <ul>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>$0.0006 за один запрос к HikerAPI — прозрачная себестоимость</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Вся база профилей и история поисков — ваши, на вашем сервере</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Фильтры, оценка и интеграции адаптируются под ваши процессы</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="s11">
+  <div class="slide-num">11 / 18</div>
+  <div class="slide-tag">Экономика</div>
+  <div class="eyebrow">Расчёт по объёму нагрузки</div>
+  <h1 class="headline">Посчитано для трёх сценариев</h1>
+  <table class="data-table" style="margin-top:24px;">
+    <tr><th>Параметр</th><th>Малый</th><th>Средний</th><th>Большой</th></tr>
+    <tr><td class="strong">Кто пользуется</td><td>1 специалист</td><td>Команда 3–5 чел.</td><td>Команда 20–50 чел.</td></tr>
+    <tr><td class="strong">Поисков в месяц</td><td class="mono">20</td><td class="mono">200</td><td class="mono">2 000</td></tr>
+    <tr><td class="strong">Расходы в месяц</td><td class="mono">~$15</td><td class="mono">~$104</td><td class="mono">~$599</td></tr>
+    <tr><td class="strong">Средняя цена поиска</td><td class="mono">~$0.74</td><td class="mono">~$0.52</td><td class="mono">~$0.30</td></tr>
+  </table>
+  <p class="lede" style="margin-top:22px;">Расходы — это прямые платежи HikerAPI, OpenAI и хостингу, без наценки Alba Creation. Полный расчёт по этапам — в техническом описании.</p>
+</section>
+
+<section class="slide" id="s12">
+  <div class="slide-num">12 / 18</div>
+  <div class="slide-tag">Экономика</div>
+  <div class="eyebrow">Эффект масштаба</div>
+  <h1 class="headline">Чем больше объём — тем дешевле поиск</h1>
+  <div class="bars">
+    <div class="bar-col">
+      <div class="bar-price">$0.74</div>
+      <div class="bar-track"><div class="bar-fill" style="height:100%"></div></div>
+      <div class="bar-label">Малый объём<br>20 поисков / мес</div>
+    </div>
+    <div class="bar-col">
+      <div class="bar-price">$0.52</div>
+      <div class="bar-track"><div class="bar-fill" style="height:70%"></div></div>
+      <div class="bar-label">Средний объём<br>200 поисков / мес</div>
+    </div>
+    <div class="bar-col">
+      <div class="bar-price">$0.30</div>
+      <div class="bar-track"><div class="bar-fill" style="height:40%"></div></div>
+      <div class="bar-label">Большой объём<br>2 000 поисков / мес</div>
+    </div>
+  </div>
+  <p class="lede" style="margin-top:36px;">За счёт накопленной базы 30–60% поисков в среднем и большом объёме используют уже загруженные профили и обходятся в $0.03–0.06 вместо полной цены нового поиска.</p>
+</section>
+
+<section class="slide" id="s13">
+  <div class="slide-num">13 / 18</div>
+  <div class="slide-tag">Предложение</div>
+  <div class="eyebrow">Передача продукта</div>
+  <h1 class="headline">Как мы передаём InSights вам</h1>
+  <p class="lede">Два варианта — в зависимости от того, есть ли в штате разработчики, готовые поддерживать систему самостоятельно.</p>
+  <div class="grid-2" style="margin-top:40px;">
+    <div class="card">
+      <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg></div>
+      <h3>Есть свои разработчики</h3>
+      <p>Передаём код, разворачиваем на вашей инфраструктуре — дальше команда ведёт продукт сама</p>
+    </div>
+    <div class="card">
+      <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+      <h3>Нет своих разработчиков</h3>
+      <p>То же самое плюс 3 месяца сопровождения и доработки по договорённости</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="s14">
+  <div class="slide-num">14 / 18</div>
+  <div class="slide-tag">Пакет 1</div>
+  <div class="eyebrow">Для команд со своими разработчиками</div>
+  <h1 class="headline">Код + внедрение</h1>
+  <div class="grid-2" style="margin-top:20px;align-items:stretch;">
+    <div class="pkg-card">
+      <div class="pkg-for">Что входит</div>
+      <ul>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Полный исходный код: сайт, сервер, все интеграции</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Документация по архитектуре и API</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Развёртывание на вашей инфраструктуре</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Настройка подключений к HikerAPI и OpenAI под ваши ключи</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Передача прав на использование продукта</li>
+      </ul>
+      <div class="pkg-time">Срок передачи: 2–3 недели</div>
+    </div>
+    <div>
+      <div class="stat" style="margin-bottom:28px;">
+        <div class="val">от $3 500</div>
+        <div class="lab">единоразово, за передачу и внедрение</div>
+      </div>
+      <p class="lede">Операционные расходы на HikerAPI, OpenAI и сервер — отдельно, напрямую поставщикам: от $15 до $599 в месяц в зависимости от объёма поисков.</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="s15">
+  <div class="slide-num">15 / 18</div>
+  <div class="slide-tag">Пакет 2</div>
+  <div class="eyebrow">Для команд без штатного разработчика</div>
+  <h1 class="headline">Код + внедрение + сопровождение</h1>
+  <div class="grid-2" style="margin-top:20px;align-items:stretch;">
+    <div class="pkg-card featured">
+      <div class="pkg-for">Всё из пакета 1, плюс</div>
+      <ul>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>3 месяца технического сопровождения</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Обучение команды работе с системой</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Доработки и адаптация под ваши ниши — по договорённости</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Приоритетная связь с разработчиком на время сопровождения</li>
+      </ul>
+      <div class="pkg-time">Срок: 3–4 недели внедрение + 3 месяца сопровождения</div>
+    </div>
+    <div>
+      <div class="stat" style="margin-bottom:28px;">
+        <div class="val"><span class="accent">от $6 000</span></div>
+        <div class="lab">единоразово, включая 3 месяца сопровождения</div>
+      </div>
+      <p class="lede">Рекомендуемый вариант, если в команде нет разработчика для самостоятельной поддержки продукта после передачи.</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="s16">
+  <div class="slide-num">16 / 18</div>
+  <div class="slide-tag">Почему мы</div>
+  <div class="eyebrow">Alba Creation</div>
+  <h1 class="headline">Проверено в бою — не гипотеза</h1>
+  <div class="grid-4" style="margin-top:44px;">
+    <div class="card">
+      <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12l2 2 4-4M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg></div>
+      <h3>Работает в бою</h3>
+      <p>Инструмент уже используется внутренней командой Alba Creation, а не лежит прототипом</p>
+    </div>
+    <div class="card">
+      <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 8V6a5 5 0 00-10 0v2M5 8h14l-1 12H6L5 8z"/></svg></div>
+      <h3>Без vendor lock-in</h3>
+      <p>Передаём код целиком — вы не зависите от нас, чтобы продолжать пользоваться продуктом</p>
+    </div>
+    <div class="card">
+      <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18M7 15l4-6 4 3 4-8"/></svg></div>
+      <h3>Прозрачная экономика</h3>
+      <p>Каждая цифра расходов разложена по этапам и запросам — ничего не спрятано в наценке</p>
+    </div>
+    <div class="card">
+      <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+      <h3>Понимаем нишу</h3>
+      <p>Продукт вырос из реальной задачи закупки рекламы у блогеров, а не абстрактного ТЗ</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="s17">
+  <div class="slide-num">17 / 18</div>
+  <div class="slide-tag">Следующий шаг</div>
+  <div class="eyebrow">Свяжемся</div>
+  <h1 class="headline">Обсудим детали и посчитаем экономику под ваш объём</h1>
+  <p class="lede">Пришлите примерное число поисков в месяц и размер команды — подготовим точный расчёт и уточнённое предложение по срокам.</p>
+  <div class="contact-list">
+    <div class="row"><span class="k">Компания</span><span class="v">Alba Creation</span></div>
+    <div class="row"><span class="k">Сайт</span><span class="v">alba-creation.ru</span></div>
+    <div class="row"><span class="k">Почта</span><span class="v">—<span class="placeholder-tag">уточнить</span></span></div>
+    <div class="row"><span class="k">Telegram</span><span class="v">—<span class="placeholder-tag">уточнить</span></span></div>
+  </div>
+  <div class="cta-row">
+    <div class="pill">Предложение актуально 30 дней с даты презентации</div>
+  </div>
+</section>
+
+<section class="slide closing" id="s18">
+  <canvas id="graph-canvas-2" class="graph-bg"></canvas>
+  <div class="closing-inner">
+    <div class="eyebrow" style="justify-content:center;">Спасибо</div>
+    <h1>Блогеры находятся через связи. <span class="accent">Мы уже построили инструмент</span>, который их находит — осталось передать его вам.</h1>
+    <div class="final-tag">InSights · Alba Creation · alba-creation.ru</div>
+  </div>
+</section>
+
+</div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('section.slide'));
+  var dotsNav = document.getElementById('dots');
+  var counterNow = document.getElementById('counter-now');
+  var progressFill = document.getElementById('progress-fill');
+  var deck = document.getElementById('deck');
+
+  slides.forEach(function(s, i){
+    var b = document.createElement('button');
+    b.setAttribute('aria-label', 'Слайд ' + (i+1));
+    if(i===0) b.classList.add('active');
+    b.addEventListener('click', function(){ s.scrollIntoView({behavior:'smooth'}); });
+    dotsNav.appendChild(b);
+  });
+  var dotButtons = Array.prototype.slice.call(dotsNav.children);
+
+  function pad(n){ return n < 10 ? '0'+n : ''+n; }
+
+  function updateActive(){
+    var scrollTop = deck.scrollTop;
+    var winH = deck.clientHeight;
+    var idx = Math.round(scrollTop / winH);
+    idx = Math.max(0, Math.min(slides.length - 1, idx));
+    dotButtons.forEach(function(b, i){ b.classList.toggle('active', i === idx); });
+    counterNow.textContent = pad(idx + 1);
+    var maxScroll = deck.scrollHeight - winH;
+    var pct = maxScroll > 0 ? (scrollTop / maxScroll) * 100 : 0;
+    progressFill.style.width = pct + '%';
+    return idx;
+  }
+
+  deck.addEventListener('scroll', function(){ window.requestAnimationFrame(updateActive); });
+  updateActive();
+
+  document.getElementById('next-btn').addEventListener('click', function(){
+    var idx = updateActive();
+    var next = slides[Math.min(slides.length - 1, idx + 1)];
+    next.scrollIntoView({behavior:'smooth'});
+  });
+  document.getElementById('prev-btn').addEventListener('click', function(){
+    var idx = updateActive();
+    var prev = slides[Math.max(0, idx - 1)];
+    prev.scrollIntoView({behavior:'smooth'});
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(['ArrowDown','ArrowRight','PageDown',' '].indexOf(e.key) !== -1){
+      e.preventDefault();
+      var idx = updateActive();
+      var next = slides[Math.min(slides.length - 1, idx + 1)];
+      next.scrollIntoView({behavior:'smooth'});
+    } else if(['ArrowUp','ArrowLeft','PageUp'].indexOf(e.key) !== -1){
+      e.preventDefault();
+      var idx = updateActive();
+      var prev = slides[Math.max(0, idx - 1)];
+      prev.scrollIntoView({behavior:'smooth'});
+    }
+  });
+
+  function initGraph(canvasId){
+    var canvas = document.getElementById(canvasId);
+    if(!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var W, H, nodes = [];
+    var NODE_COUNT = 34;
+
+    function resize(){
+      var rect = canvas.parentElement.getBoundingClientRect();
+      W = canvas.width = rect.width;
+      H = canvas.height = rect.height;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    for(var i=0;i<NODE_COUNT;i++){
+      nodes.push({
+        x: Math.random()*W,
+        y: Math.random()*H,
+        vx: (Math.random()-0.5)*0.18,
+        vy: (Math.random()-0.5)*0.18,
+        r: Math.random()*1.6 + 1
+      });
+    }
+
+    function step(){
+      ctx.clearRect(0,0,W,H);
+      for(var i=0;i<nodes.length;i++){
+        var n = nodes[i];
+        n.x += n.vx; n.y += n.vy;
+        if(n.x < 0 || n.x > W) n.vx *= -1;
+        if(n.y < 0 || n.y > H) n.vy *= -1;
+      }
+      for(var i=0;i<nodes.length;i++){
+        for(var j=i+1;j<nodes.length;j++){
+          var a = nodes[i], b = nodes[j];
+          var dx = a.x-b.x, dy = a.y-b.y;
+          var dist = Math.sqrt(dx*dx+dy*dy);
+          if(dist < 160){
+            ctx.strokeStyle = 'rgba(103,133,255,' + (0.16*(1-dist/160)) + ')';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(a.x,a.y);
+            ctx.lineTo(b.x,b.y);
+            ctx.stroke();
+          }
+        }
+      }
+      for(var i=0;i<nodes.length;i++){
+        var n = nodes[i];
+        ctx.fillStyle = 'rgba(103,133,255,0.55)';
+        ctx.beginPath();
+        ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
+        ctx.fill();
+      }
+      requestAnimationFrame(step);
+    }
+    step();
+  }
+  initGraph('graph-canvas');
+  initGraph('graph-canvas-2');
+})();
+</script>
+
+</body>
+</html>
